@@ -1,0 +1,466 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   DESIGN TOKENS
+   Single source of truth for palette, motion and atmosphere. Tailwind reads
+   the same values (see tailwind.config.js) so utilities and hand-written CSS
+   never drift apart.
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+
+  /* --- Core palette ------------------------------------------------------ */
+  --bg: #070b12;
+  --bg-2: #0d141c;
+  --surface: #111a24;
+  --surface-hover: #162230;
+
+  --accent: #6ce7f2;
+  --accent-soft: #9bf3fa;
+  --accent-deep: #2fa9c4;
+  /* Deep azure exists only to give gradients somewhere cool to fall off to.
+     It is never used as a foreground colour. */
+  --azure: #3e7bc7;
+
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  /* --- RGB channels (for rgb(x y z / a) alpha compositing) --------------- */
+  --accent-rgb: 108 231 242;
+  --azure-rgb: 62 123 199;
+  --bg-rgb: 7 11 18;
+
+  /* --- Atmosphere -------------------------------------------------------- */
+  --aura-cyan: rgb(var(--accent-rgb) / 0.1);
+  --aura-blue: rgb(var(--azure-rgb) / 0.09);
+  --grid-line: rgb(var(--accent-rgb) / 0.055);
+
+  /* --- Motion ------------------------------------------------------------ */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 220ms;
+  --dur-base: 340ms;
+  --dur-slow: 700ms;
+  --stagger: 80ms;
+
+  /* --- Scroll-driven state (written imperatively, never via React state) -- */
+  --scroll-progress: 0;
+}
+
+/* ============================================================================
+   BASE
+   ========================================================================== */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    /* Prevents the atmosphere layers from creating a horizontal scroll gutter */
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgb(var(--accent-rgb) / 0.22);
+    color: #ffffff;
+  }
+
+  /* One consistent, high-contrast focus ring everywhere. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent-rgb) / 0.7);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+/* ============================================================================
+   SCROLLBAR
+   ========================================================================== */
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #17212d;
+  border-radius: 6px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--accent-rgb) / 0.32);
+}
+
+/* ============================================================================
+   ATMOSPHERE LAYERS
+   All soft light is built from radial/linear gradients rather than blur()
+   filters — gradients cost nothing to composite, whereas blurring a
+   1000px element is one of the most expensive things a page can do.
+   ========================================================================== */
+@layer components {
+  /* Faint architectural grid, faded out towards the edges. */
+  .atmo-grid {
+    background-image: linear-gradient(
+        to right,
+        var(--grid-line) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 72px 72px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 90% 70% at 50% 20%,
+      #000 0%,
+      rgba(0, 0, 0, 0.55) 45%,
+      transparent 78%
+    );
+    mask-image: radial-gradient(
+      ellipse 90% 70% at 50% 20%,
+      #000 0%,
+      rgba(0, 0, 0, 0.55) 45%,
+      transparent 78%
+    );
+  }
+
+  /* Coarse dot matrix — used sparingly behind dense visual sections. */
+  .atmo-dots {
+    background-image: radial-gradient(
+      rgb(var(--accent-rgb) / 0.16) 1px,
+      transparent 1px
+    );
+    background-size: 30px 30px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 70% 60% at 50% 50%,
+      #000,
+      transparent 72%
+    );
+    mask-image: radial-gradient(
+      ellipse 80% 65% at 50% 50%,
+      #000,
+      transparent 74%
+    );
+  }
+
+  /* Film grain. A single 160px tile keeps rasterisation cost trivial. */
+  .atmo-grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: 0.028;
+  }
+
+  /* Darkens page edges so content always sits on a slightly deeper field. */
+  .atmo-vignette {
+    background: radial-gradient(
+      ellipse 120% 90% at 50% 40%,
+      transparent 35%,
+      rgb(var(--bg-rgb) / 0.55) 78%,
+      rgb(var(--bg-rgb) / 0.9) 100%
+    );
+  }
+
+  /* Soft radial light source — the building block for every aura. */
+  .aura {
+    background: radial-gradient(
+      closest-side,
+      var(--aura-color, var(--aura-cyan)),
+      transparent 100%
+    );
+  }
+
+  /* --- Surfaces ---------------------------------------------------------- */
+  .panel {
+    background-color: rgb(13 20 28 / 0.82);
+    border: 1px solid rgb(255 255 255 / 0.075);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035),
+      0 24px 60px -32px rgb(0 0 0 / 0.9);
+  }
+
+  .panel-raised {
+    background-image: linear-gradient(
+      160deg,
+      rgb(22 34 48 / 0.9),
+      rgb(13 20 28 / 0.92) 55%
+    );
+    border: 1px solid rgb(255 255 255 / 0.09);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 30px 70px -36px rgb(0 0 0 / 0.95);
+  }
+
+  /* Hairline rule that fades at both ends. */
+  .hairline {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.11) 15%,
+      rgb(255 255 255 / 0.11) 85%,
+      transparent
+    );
+  }
+
+  .hairline-accent {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--accent-rgb) / 0.35) 30%,
+      rgb(var(--accent-rgb) / 0.35) 70%,
+      transparent
+    );
+  }
+
+  /* Vertical hairline used as a section rail. */
+  .rail {
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      rgb(255 255 255 / 0.1) 20%,
+      rgb(255 255 255 / 0.06) 80%,
+      transparent
+    );
+  }
+
+  /* --- Typographic helpers ----------------------------------------------- */
+  .eyebrow {
+    font-family: "JetBrains Mono", Menlo, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* Cyan edge-light behind the hero name. Two stacked shadows keep it soft
+     rather than neon. */
+  .text-edge-light {
+    text-shadow: 0 0 32px rgb(var(--accent-rgb) / 0.22),
+      0 0 90px rgb(var(--accent-rgb) / 0.1);
+  }
+}
+
+/* ============================================================================
+   TECH STACK — CATEGORY HIGHLIGHT
+   Hovering any technology chip lifts the whole category card. Handled in CSS
+   with :has() so there is no state to synchronise and no re-render on hover.
+   ========================================================================== */
+.tech-pill-group {
+  transition: border-color 340ms var(--ease-soft),
+    background-color 340ms var(--ease-soft), box-shadow 340ms var(--ease-soft);
+}
+
+.tech-pill-group:has(.tech-pill:hover) {
+  border-color: rgb(var(--accent-rgb) / 0.3);
+  background-color: rgb(17 26 36 / 0.85);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 0 44px -26px rgb(var(--accent-rgb) / 0.6);
+}
+
+.tech-pill-group .tech-pill-dot {
+  transition: background-color 300ms var(--ease-soft),
+    box-shadow 300ms var(--ease-soft);
+}
+
+.tech-pill-group:has(.tech-pill:hover) .tech-pill-dot {
+  background-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* ============================================================================
+   SCROLL REVEAL SYSTEM
+   Content is visible by default. `html.motion-ready` is only added once JS has
+   mounted, so a JS failure can never leave the page blank.
+   ========================================================================== */
+[data-reveal] {
+  --reveal-y: 22px;
+  --reveal-x: 0px;
+  --reveal-scale: 1;
+  --reveal-delay: 0ms;
+  --reveal-duration: 760ms;
+}
+
+.motion-ready [data-reveal] {
+  opacity: 0;
+  transform: translate3d(var(--reveal-x), var(--reveal-y), 0)
+    scale(var(--reveal-scale));
+  transition: opacity var(--reveal-duration) var(--ease-soft) var(--reveal-delay),
+    transform var(--reveal-duration) var(--ease-soft) var(--reveal-delay);
+  will-change: opacity, transform;
+}
+
+.motion-ready [data-reveal].is-revealed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  /* Release the compositor hint once the element has settled. */
+  will-change: auto;
+}
+
+/* Load-time entrance, for above-the-fold hero content. */
+.motion-ready [data-enter] {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  animation: entrance 900ms var(--ease-soft) both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+@keyframes entrance {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* ============================================================================
+   AMBIENT ANIMATION
+   Transform/opacity only — never layout properties.
+   ========================================================================== */
+@keyframes atmo-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2.5%, -3%, 0) scale(1.06);
+  }
+}
+
+@keyframes atmo-drift-alt {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.04);
+  }
+  50% {
+    transform: translate3d(-3%, 2.5%, 0) scale(1);
+  }
+}
+
+@keyframes signal-scan {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(1000%);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes dash-travel {
+  to {
+    stroke-dashoffset: -80;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-atmo-drift {
+  animation: atmo-drift 34s var(--ease-in-out-soft) infinite;
+}
+.animate-atmo-drift-alt {
+  animation: atmo-drift-alt 42s var(--ease-in-out-soft) infinite;
+}
+.animate-pulse-soft {
+  animation: pulse-soft 4.5s var(--ease-in-out-soft) infinite;
+}
+.animate-dash-travel {
+  animation: dash-travel 6s linear infinite;
+}
+
+/* A single pixel of light travelling down the hero pipeline spine. Moving the
+   background-position rather than `top` keeps it off the layout path. */
+@keyframes spine-scan {
+  0% {
+    background-position-y: -120%;
+  }
+  100% {
+    background-position-y: 220%;
+  }
+}
+
+.spine-scan {
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgb(var(--accent-rgb) / 0.75) 8%,
+    transparent 20%
+  );
+  background-size: 100% 260%;
+  background-repeat: no-repeat;
+  animation: spine-scan 7.5s var(--ease-in-out-soft) infinite;
+  will-change: background-position;
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Revealed content must still be readable when motion is off. */
+  .motion-ready [data-reveal],
+  .motion-ready [data-enter] {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+/* Respect users who ask the OS for higher contrast. */
+@media (prefers-contrast: more) {
+  :root {
+    --text-muted: #b6c2d1;
+    --grid-line: rgb(var(--accent-rgb) / 0.1);
+  }
+}

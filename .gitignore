@@ -1,0 +1,15 @@
+# Installed dependencies
+website/node_modules/
+
+# Generated production files
+website/dist/
+
+# Local environment files and secrets
+website/.env
+website/.env.*
+!website/.env.example
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
